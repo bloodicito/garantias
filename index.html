@@ -1,0 +1,55 @@
+<?php
+require __DIR__ . '/vendor/autoload.php'; // Carga la biblioteca de Google Sheets
+
+use Google\Spreadsheet\DefaultServiceRequest;
+use Google\Spreadsheet\ServiceRequestFactory;
+
+// Autenticación con Google Sheets
+putenv('GOOGLE_APPLICATION_CREDENTIALS=your_service_account_credentials.json');
+$client = new Google_Client;
+$client->useApplicationDefaultCredentials();
+$client->setApplicationName("My Google Sheets App");
+$client->setScopes(['https://www.googleapis.com/auth/spreadsheets']);
+if ($client->isAccessTokenExpired()) {
+    $client->refreshTokenWithAssertion();
+}
+$accessToken = $client->fetchAccessTokenWithAssertion()["access_token"];
+ServiceRequestFactory::setInstance(new DefaultServiceRequest($accessToken));
+
+// ID de la hoja de cálculo y nombre de la hoja
+$spreadsheetId = 'your_spreadsheet_id';
+$worksheetId = 'od6';
+
+// Verifica las credenciales ingresadas
+$usuario = $_POST['codigo'];
+$contrasena = $_POST['contrasena'];
+
+// Obtiene los datos de la hoja de cálculo
+$spreadsheet = (new Google\Spreadsheet\SpreadsheetService)
+    ->getSpreadsheetFeed()
+    ->getByTitle($spreadsheetId);
+$worksheets = $spreadsheet->getWorksheetFeed()->getEntries();
+$worksheet = $worksheets[$worksheetId];
+$listFeed = $worksheet->getListFeed();
+$credenciales_correctas = false;
+
+foreach ($listFeed->getEntries() as $entry) {
+    $row = $entry->getValues();
+    if ($row['usuario'] == $usuario && $row['contrasena'] == $contrasena) {
+        $credenciales_correctas = true;
+        break;
+    }
+}
+
+if ($credenciales_correctas) {
+    // El usuario y contraseña son válidos, ahora puedes obtener los movimientos
+    foreach ($listFeed->getEntries() as $entry) {
+        $movimiento = $entry->getValues();
+        // Aquí puedes mostrar los movimientos o hacer cualquier otra cosa con ellos
+        echo '<pre>';
+        print_r($movimiento);
+        echo '</pre>';
+    }
+} else {
+    echo 'Código o contraseña incorrectos.';
+}
